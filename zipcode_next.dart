@@ -2,41 +2,24 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-class NextPage extends StatefulWidget {
+class NextPage extends StatelessWidget {
   final String zipcode;
 
   NextPage({required this.zipcode});
 
-  @override
-  _NextPageState createState() => _NextPageState();
-}
-
-class _NextPageState extends State<NextPage> {
-  String result = 'データを取得しています...';
-
-  @override
-  void initState() {
-    super.initState();
-    getData();
-  }
-
-  void getData() async {
-    String url = "https://zipcloud.ibsnet.co.jp/api/search?zipcode=" + widget.zipcode;
+  Future<String> getData() async {
+    String url = "https://zipcloud.ibsnet.co.jp/api/search?zipcode=" + zipcode;
     final response = await http.get(Uri.parse(url));
 
     if (response.statusCode == 200) {
       var data = json.decode(response.body);
-      setState(() {
-        result = data['results'] != null
-            ? data['results'][0]['address1'] +
-            data['results'][0]['address2'] +
-            data['results'][0]['address3']
-            : '郵便番号が見つかりませんでした';
-      });
+      return data['results'] != null
+          ? data['results'][0]['address1'] +
+              data['results'][0]['address2'] +
+              data['results'][0]['address3']
+          : '郵便番号が見つかりませんでした';
     } else {
-      setState(() {
-        result = 'データの取得に失敗しました';
-      });
+      return 'データの取得に失敗しました';
     }
   }
 
@@ -47,7 +30,18 @@ class _NextPageState extends State<NextPage> {
         title: Text('Second Screen'),
       ),
       body: Center(
-        child: Text(result),
+        child: FutureBuilder<String>(
+          future: getData(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Text('データを取得しています...');
+            } else if (snapshot.hasError) {
+              return Text('エラーが発生しました');
+            } else {
+              return Text(snapshot.data ?? 'データがありません');
+            }
+          },
+        ),
       ),
     );
   }
